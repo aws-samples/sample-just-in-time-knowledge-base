@@ -1,0 +1,137 @@
+/* General Layout */
+
+:root {
+  --primary-color: rgb(35, 47, 62);
+  --primary-color-delete: rgb(255, 0, 60);
+  --secondary-color: rgb(11, 114, 211);
+  --background-color: #ffffff;
+  --text-color: #333;
+  --border-color: #dee2e6;
+  --hover-color: rgb(9, 93, 172);
+  --hover-color-delete: rgb(212, 0, 49);
+}
+
+/* Common button styles */
+.btn-primary {
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: var(--hover-color);
+}
+
+.btn-primary-delete {
+  background-color: var(--primary-color-delete);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.btn-primary-delete:hover {
+  background-color: var(--hover-color-delete);
+}
+
+.btn-cancel {
+  background-color: white !important;
+  color: #0066cc;
+  border: 1px solid #0066cc;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-cancel:hover {
+  background-color: #f0f8ff !important;
+}
+
+/* Common table styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  background-color: white;
+}
+
+th, td {
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+th {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+tr:nth-child(even) {
+  background-color: var(--background-color);
+}
+
+header {
+  background: var(--primary-color);
+  padding: 1rem 1rem; /* Reduced from 1rem to 0.5rem */
+  display: flex;
+  align-items: center;
+  border-bottom: 15px solid var(--primary-color);
+  border-top: 15px solid var(--primary-color);
+  color: white;
+  height: 32px; /* Added explicit height */
+}
+
+header .logo img {
+  height: 40px;
+  margin-right: 1rem;
+  /* background-color: var(--button-color); */
+}
+
+header h1 {
+  margin: 0;
+  flex-grow: 1;
+  color: white;
+}
+
+/* Generic Button Styles */
+button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button:hover {
+  background-color: #f8f9fa;
+}
+
+/* Utility Classes */
+.hidden {
+  display: none !important;
+}
+
+.form-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.table-buttons {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0rem;
+}

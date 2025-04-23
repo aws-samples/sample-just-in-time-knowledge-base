@@ -1,0 +1,8 @@
+{
+    "name": "sample-just-in-time-lambda-layer",
+    "version": "1.0.0",
+    "scripts": {
+      "build": "chmod +x ./build_layer.sh && ./build_layer.sh"
+    }
+  }
+  

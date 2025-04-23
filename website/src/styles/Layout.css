@@ -1,0 +1,47 @@
+/* Layout styles */
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo img {
+  height: 40px;
+  width: auto;
+}
+
+.logo h1 {
+  margin: 0;
+}
+
+.main-content {
+  flex: 1;
+  padding-top: 0.1rem;
+  padding-right: 2rem;
+  padding-bottom: 0.1;
+  padding-left: 2rem;
+}
+
+
+.footer {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.1rem;
+  text-align: center;
+  line-height: 0.5;
+}
