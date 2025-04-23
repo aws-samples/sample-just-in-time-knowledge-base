@@ -1,0 +1,24 @@
+{
+    "name": "sample-just-in-time-knowledge-base",
+    "workspaces": [
+      "infrastructure",
+      "website",
+      "infrastructure/lambda/layers/sample-just-in-time-layer"
+    ],
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+      "install:all": "npm run install:web && npm run install:infra && npm install",
+      "install:infra": "npm install --workspace=infrastructure",
+      "install:web": "npm install --workspace=website",
+      "build:web": "npm run build --workspace=website",
+      "build:infra": "npm run cdk synth --workspace=infrastructure",
+      "build:layers": "npm run build --workspace=infrastructure/lambda/layers/sample-just-in-time-layer",
+      "build": "npm run build:web && npm run build:infra",
+      "test": "npm test --workspace=infrastructure",
+      "dev": "npm run dev --workspace website",
+      "deploy": "npm run build && npm run deploy --workspace=infrastructure",
+      "deploy:local": "npm run build && npm run deploy:local --workspace=infrastructure",
+      "destroy": "npm run cdk destroy --workspace=infrastructure"
+    }
+  }

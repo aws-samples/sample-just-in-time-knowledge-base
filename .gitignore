@@ -1,0 +1,23 @@
+!jest.config.js
+*.d.ts
+node_modules
+.DS_Store
+config*.js
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
+website/dist
+
+# Python
+__pycache__
+.pytest_cache
+
+# Lambda layer dependencies - don't commit the installed packages
+infrastructure/lambda/layers/*/python/*
+!infrastructure/lambda/layers/*/python/.gitkeep
+!infrastructure/lambda/layers/*/requirements.txt
+infrastructure/lib/*.js
+infrastructure/bin/*.js
+infrastructure/test/*.js
