@@ -119,6 +119,16 @@ Key technologies:
 - Amazon Cognito for authentication
 - AWS SDK for JavaScript
 
+#### Project Files View
+The project files view allows users to manage documents within a project. Users can upload new files, view existing ones, and select files to include in their knowledge base queries.
+
+<img src="readme-images/project_file_screenshot.jpg" width="70%" alt="Project Files View">
+
+#### Chat Interface
+The chat interface enables users to ask natural language questions about their project files. The system leverages Amazon Bedrock to provide contextually relevant answers based on the content of the selected documents.
+
+<img src="readme-images/chat_screenshot.jpg" width="70%" alt="Chat Interface">
+
 ### Infrastructure (AWS CDK)
 
 The infrastructure code deploys:
