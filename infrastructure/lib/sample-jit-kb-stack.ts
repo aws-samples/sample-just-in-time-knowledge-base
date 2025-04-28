@@ -434,6 +434,7 @@ export class SampleJITKBStack extends cdk.Stack {
         ALLOW_HEADERS: allowHeaders,
         KNOWLEDGE_BASE_ID: knowledgeBaseStack.knowledgeBase.attrKnowledgeBaseId,
         DATA_SOURCE_ID: knowledgeBaseStack.dataSource.attrDataSourceId,
+        TENANTS: JSON.stringify({ Tenants: tenants }),
         // Add PowerTools environment variables
         ...powertoolsEnv
       },

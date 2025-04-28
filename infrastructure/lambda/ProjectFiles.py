@@ -18,6 +18,16 @@ from common_utils import (
 # Initialize DynamoDB table
 table = dynamodb.Table(os.environ['PROJECT_FILES_TABLE'])
 
+# Load tenant configuration
+tenants = json.loads(os.environ.get('TENANTS', '{"Tenants":[]}'))['Tenants']
+
+@tracer.capture_method  
+def find_tenant(tenant_id, tenants):
+    try:
+        return next(tenant for tenant in tenants if tenant['Id'] == tenant_id)
+    except StopIteration:
+        return None
+
 @logger.inject_lambda_context
 @tracer.capture_lambda_handler
 @metrics.log_metrics
@@ -211,6 +221,29 @@ def handle_file_upload(event):
         if not file_size:
             logger.warning("Missing file size in request")
             return create_response(event, 400, {'error': 'file size is required'})
+            
+        # Check tenant file limit
+        tenant = find_tenant(tenant_id, tenants)
+        if not tenant:
+            logger.warning(f"Tenant not found: {tenant_id}")
+            return create_response(event, 400, {'error': 'Invalid tenant'})
+            
+        # Count existing files for this project
+        response = table.query(
+            IndexName='tenantId-projectId-index',
+            KeyConditionExpression=Key('tenantId').eq(tenant_id) & Key('projectId').eq(project_id)
+        )
+        
+        current_file_count = len(response.get('Items', []))
+        max_files = tenant['MaxFiles']
+        
+        if current_file_count >= max_files:
+            logger.warning(f"File limit exceeded for tenant {tenant_id}. Current: {current_file_count}, Max: {max_files}")
+            metrics.add_metric(name="TenantFileLimitExceeded", unit="Count", value=1)
+            return create_response(event, 400, {
+                'error': f'File limit exceeded. Maximum {max_files} files allowed per project.'
+            })
+            
         s3_key = f"{tenant_id}/{project_id}/{file_name}"
         # Create the file record in DynamoDB
         file_id = create_file_record(user_id, tenant_id, project_id, file_name, file_size, s3_key)

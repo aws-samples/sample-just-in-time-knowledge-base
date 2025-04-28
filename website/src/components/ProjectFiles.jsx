@@ -74,9 +74,9 @@ function ProjectFiles() {
       await loadProjectDetails();
       await loadProjectFiles();
     };
-    
+
     loadData();
-    
+
     return () => {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
@@ -200,9 +200,37 @@ function ProjectFiles() {
       setUploadProgress(0);
     } catch (error) {
       console.error('Error uploading files:', error);
+
+      // Generic error handler for unexpected errors
+      let errorMessage = 'Error uploading files. Please try again.';
+
+      if (error.message) {
+        errorMessage = error.message;
+
+        // Try to extract JSON error from message
+        const match = error.message.match(/API request failed: \d+ \s*-\s*(\{.*\})/);
+        if (match && match[1]) {
+          try {
+            const parsedError = JSON.parse(match[1]);
+            if (parsedError.error) {
+              errorMessage = parsedError.error;
+            }
+          } catch (e) {
+            // Keep original message if parsing fails
+          }
+        }
+      }
+
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+
       setUploadProgress(0);
       setIsUploading(false);
-      event.target.value = ''; // Reset the file input on error too
+    } finally {
+      event.target.value = ''; // Reset the file input
     }
   };
 
@@ -569,7 +597,7 @@ function ProjectFiles() {
         query: query,
         sessionId: sessionId // Include sessionId if available
       });
-      
+
       console.log('Knowledge base response:', data);
 
       // Check if response contains a sessionId and store it
@@ -640,13 +668,13 @@ function ProjectFiles() {
     const isConfirmed = window.confirm(
       t('chat.interface.CONFIRM_NEW_CHAT')
     );
-    
+
     // If user confirms, start new chat session
     if (isConfirmed) {
       startNewChatSession();
     }
   };
-  
+
   // Function to start a new chat session
   const startNewChatSession = async () => {
     try {
@@ -655,7 +683,7 @@ function ProjectFiles() {
         await apiClient.deleteChatHistory(sessionId);
         console.log('Chat history deleted successfully');
       }
-      
+
       // Reset session ID and chat messages
       setSessionId(null);
       setChatMessages([{
@@ -1249,8 +1277,8 @@ function ProjectFiles() {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={handleCloseSnackbar} 
+        <Alert
+          onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >
