@@ -649,10 +649,38 @@ function ProjectFiles() {
     } catch (error) {
       console.error('Error querying knowledge base:', error);
 
+      // Check for rate limit error (429)
+      let errorContent = `Error: ${error.message}`;
+      
+      // Try to extract JSON error from message
+      const match = error.message.match(/API request failed: 429\s*-\s*(\{.*\})/);
+      if (match && match[1]) {
+        try {
+          const parsedError = JSON.parse(match[1]);
+          if (parsedError.error === "Rate limit exceeded") {
+            // Special handling for rate limit error
+            errorContent = (
+              <div className="rate-limit-error">
+                <h4 style={{ margin: '0 0 8px 0', color: '#d32f2f' }}>Rate Limit Exceeded</h4>
+                <p style={{ margin: '0 0 8px 0' }}>
+                  You have reached your maximum number of queries allowed per minute.
+                </p>
+                <p style={{ margin: '0', fontSize: '0.9em' }}>
+                  Please wait a moment before trying again.
+                </p>
+              </div>
+            );
+          }
+        } catch (e) {
+          // Keep original message if parsing fails
+          console.error('Error parsing error message:', e);
+        }
+      }
+
       // Add error message to chat
       const errorMessage = {
         type: 'error',
-        content: `Error: ${error.message}`,
+        content: errorContent,
         timestamp: new Date().toISOString()
       };
 

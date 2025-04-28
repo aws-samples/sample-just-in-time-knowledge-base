@@ -180,6 +180,21 @@ export class SampleJITKBStack extends cdk.Stack {
       timeToLiveAttribute: 'ttl', // Enable TTL for automatic document expiration
       stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES, // Enable DynamoDB Streams
     });
+    
+    // Create a new table for tracking query rate limits with TTL
+    const queryRateLimitTable = new dynamodb.Table(this, 'QueryRateLimitTable', {
+      partitionKey: {
+        name: 'tenantId',
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: {
+        name: 'timestamp',
+        type: dynamodb.AttributeType.NUMBER
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      timeToLiveAttribute: 'ttl', // Enable TTL for automatic cleanup of old records
+    });
 
     // Add the Global Secondary Index
     knowledgeBaseFilesTable.addGlobalSecondaryIndex({
@@ -474,6 +489,8 @@ export class SampleJITKBStack extends cdk.Stack {
         ALLOW_HEADERS: allowHeaders,
         PROJECT_FILES_TABLE: projectFilesTable.tableName,
         CHAT_HISTORY_TABLE: chatHistoryTable.tableName,
+        QUERY_RATE_LIMIT_TABLE: queryRateLimitTable.tableName,
+        TENANTS: JSON.stringify({ Tenants: tenants }),
         // Add PowerTools environment variables
         ...powertoolsEnv
       },
@@ -483,6 +500,7 @@ export class SampleJITKBStack extends cdk.Stack {
     projectFilesTable.grantReadData(queryKnowledgeBaseFunction);
     projectsTable.grantReadData(queryKnowledgeBaseFunction);
     chatHistoryTable.grantReadWriteData(queryKnowledgeBaseFunction);
+    queryRateLimitTable.grantReadWriteData(queryKnowledgeBaseFunction);
 
     // Add permissions for Bedrock knowledge base operations
     queryKnowledgeBaseFunction.addToRolePolicy(new iam.PolicyStatement({
@@ -802,6 +820,7 @@ export class SampleJITKBStack extends cdk.Stack {
     new cdk.CfnOutput(this, `${this.stackName}_ProjectFilesTableName`, { value: projectFilesTable.tableName });
     new cdk.CfnOutput(this, `${this.stackName}_KnowledgeBaseFilesTableName`, { value: knowledgeBaseFilesTable.tableName });
     new cdk.CfnOutput(this, `${this.stackName}_ChatHistoryTableName`, { value: chatHistoryTable.tableName });
+    new cdk.CfnOutput(this, `${this.stackName}_QueryRateLimitTableName`, { value: queryRateLimitTable.tableName });
     new cdk.CfnOutput(this, `${this.stackName}_ApiUrl`, { value: api.url });
     new cdk.CfnOutput(this, `${this.stackName}_KnowledgeBaseId`, { value: knowledgeBaseStack.knowledgeBase.attrKnowledgeBaseId });
     new cdk.CfnOutput(this, `${this.stackName}_KnowledgeBaseDataSourceId`, { value: knowledgeBaseStack.dataSource.attrDataSourceId });

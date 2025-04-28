@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 import time
+import math
 from typing import List, Dict
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from botocore.exceptions import ClientError
@@ -12,6 +13,8 @@ from common_utils import (
     create_response, handle_options_request, get_user_tenant_from_claims,
     get_file_ids, batch_delete_items, handle_client_error, handle_general_exception
 )
+# Import Key for DynamoDB conditions
+from boto3.dynamodb.conditions import Key
 
 @tracer.capture_method
 def save_chat_message(session_id, user_id, tenant_id, project_id, message_type, content, timestamp, sources=None):
@@ -54,8 +57,8 @@ def get_chat_history_by_tenant_user(tenant_id, user_id):
     try:
         response = chat_history_table.query(
             IndexName='tenantId-userId-index',
-            KeyConditionExpression=dynamodb.conditions.Key('tenantId').eq(tenant_id) & 
-                                  dynamodb.conditions.Key('userId').eq(user_id),
+            KeyConditionExpression=Key('tenantId').eq(tenant_id) & 
+                                  Key('userId').eq(user_id),
             ScanIndexForward=True  # Sort by timestamp in ascending order
         )
         
@@ -65,8 +68,8 @@ def get_chat_history_by_tenant_user(tenant_id, user_id):
         while 'LastEvaluatedKey' in response:
             response = chat_history_table.query(
                 IndexName='tenantId-userId-index',
-                KeyConditionExpression=dynamodb.conditions.Key('tenantId').eq(tenant_id) & 
-                                      dynamodb.conditions.Key('userId').eq(user_id),
+                KeyConditionExpression=Key('tenantId').eq(tenant_id) & 
+                                      Key('userId').eq(user_id),
                 ScanIndexForward=True, # Sort by timestamp in ascending order
                 ExclusiveStartKey=response['LastEvaluatedKey']
             )
@@ -98,6 +101,95 @@ def delete_chat_session(tenant_id, project_id, user_id):
     except Exception as e:
         # Log as warning instead of error since we're handling the exception
         logger.warning(f"Error deleting chat session: {str(e)}")
+        return False
+
+@tracer.capture_method
+def get_tenant_query_rate_limit(tenant_id):
+    """
+    Get the query rate limit for a tenant from the tenants configuration
+    """
+    try:
+        # Get the tenants configuration from environment variables
+        tenants_config = json.loads(os.environ.get('TENANTS', '{"Tenants": []}'))
+        tenants = tenants_config.get('Tenants', [])
+        
+        # Find the tenant in the configuration
+        for tenant in tenants:
+            if tenant.get('Id') == tenant_id:
+                query_rate = tenant.get('QueryRate', 5)  # Default to 5 if not specified
+                logger.info(f"Found query rate limit for tenant {tenant_id}: {query_rate}")
+                return query_rate
+        
+        # If tenant not found, return a default value
+        logger.warning(f"Tenant {tenant_id} not found in configuration, using default query rate limit")
+        return 5  # Default query rate limit
+    except Exception as e:
+        logger.error(f"Error getting tenant query rate limit: {str(e)}")
+        return 5  # Default query rate limit on error
+
+@tracer.capture_method
+def check_rate_limit(tenant_id):
+    """
+    Check if the tenant has exceeded their query rate limit
+    Returns: (bool, int) - (is_allowed, current_count)
+    """
+    try:
+        # Get the query rate limit table
+        query_rate_limit_table = dynamodb.Table(os.environ['QUERY_RATE_LIMIT_TABLE'])
+        
+        # Get the current time
+        current_time = int(time.time())
+        # Calculate the timestamp for one minute ago
+        one_minute_ago = current_time - 60
+        
+        # Query the table for entries from this tenant in the last minute
+        response = query_rate_limit_table.query(
+            KeyConditionExpression=Key('tenantId').eq(tenant_id) & 
+                                  Key('timestamp').gte(one_minute_ago)
+        )
+        
+        # Count the number of queries in the last minute
+        query_count = len(response.get('Items', []))
+        
+        # Get the tenant's query rate limit
+        query_rate_limit = get_tenant_query_rate_limit(tenant_id)
+        
+        # Check if the tenant has exceeded their limit
+        is_allowed = query_count < query_rate_limit
+        
+        logger.info(f"Rate limit check for tenant {tenant_id}: {query_count}/{query_rate_limit} queries in the last minute")
+        
+        return is_allowed, query_count
+    except Exception as e:
+        logger.error(f"Error checking rate limit: {str(e)}")
+        # In case of error, allow the query but log the error
+        return True, 0
+
+@tracer.capture_method
+def record_query(tenant_id):
+    """
+    Record a query in the rate limit table
+    """
+    try:
+        # Get the query rate limit table
+        query_rate_limit_table = dynamodb.Table(os.environ['QUERY_RATE_LIMIT_TABLE'])
+        
+        # Get the current time
+        current_time = int(time.time())
+        
+        # Create the item to save
+        item = {
+            'tenantId': tenant_id,
+            'timestamp': current_time,
+            'ttl': current_time + 120  # TTL of 2 minutes to ensure cleanup
+        }
+        
+        # Save the item
+        query_rate_limit_table.put_item(Item=item)
+        logger.info(f"Recorded query for tenant {tenant_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error recording query: {str(e)}")
         return False
 
 @logger.inject_lambda_context
@@ -218,6 +310,16 @@ def handle_query(event, user_id, tenant_id):
     """
     Handle POST /knowledge-base/query endpoint
     """
+    # Check rate limit before processing the query
+    is_allowed, current_count = check_rate_limit(tenant_id)
+    if not is_allowed:
+        logger.warning(f"Rate limit exceeded for tenant {tenant_id}")
+        metrics.add_metric(name="RateLimitExceeded", unit="Count", value=1)
+        return create_response(event, 429, {
+            'error': 'Rate limit exceeded',
+            'message': 'You have exceeded the maximum number of queries allowed per minute'
+        })
+    
     # Parse the request body
     body = json.loads(event.get('body', '{}'))
     
@@ -247,6 +349,9 @@ def handle_query(event, user_id, tenant_id):
         return create_response(event, 400, {'error': 'Project ID is required'})
     
     logger.info(f"Processing knowledge base query: '{query}' for user: {user_id}, tenant: {tenant_id}, and project ID: {project_id}")
+    
+    # Record this query in the rate limit table
+    record_query(tenant_id)
     
     # Get all file IDs for this project
     file_ids = get_file_ids(tenant_id, project_id)
