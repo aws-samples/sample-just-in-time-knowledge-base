@@ -258,6 +258,10 @@ export class SampleJITKBStackOpenSearch extends Construct {
           text_field: {
             type: 'text',
             index: true
+          },
+          metadata_field: {
+            type: 'text',
+            index: false
           }
         }
       }

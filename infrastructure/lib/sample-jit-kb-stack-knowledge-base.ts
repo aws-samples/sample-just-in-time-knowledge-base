@@ -46,7 +46,7 @@ export class SampleJITKBStackKnowledgeBase extends Construct {
           fieldMapping: {
             vectorField: 'vector_field',
             textField: 'text_field',
-            metadataField: 'metadata'
+            metadataField: 'metadata_field'
           },
           vectorIndexName: openSearchResources.indexName
         }
