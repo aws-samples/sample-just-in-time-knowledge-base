@@ -19,7 +19,8 @@ const stackName = app.node.tryGetContext('stackName') || 'SampleJITKB';
 const stack = new SampleJITKBStack(app, 'SampleJITKBStack', {
   enableLocalhost: enableLocalhost,
   prefix: prefix,
-  stackName: stackName
+  stackName: stackName,
+  description: 'AWS Sample Code (uksb-7mdw5l0lhh)'
 });
 
 // Add stack-level suppressions if needed
