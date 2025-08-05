@@ -264,6 +264,11 @@ export class SampleJITKBStackOpenSearch extends Construct {
             index: false
           }
         }
+      },
+      settings: {
+        index: {
+          knn: true
+        }
       }
     });
     
